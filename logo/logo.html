@@ -1,0 +1,138 @@
+<html>
+
+<script>
+const gaussians = [
+    {
+        center: 0.25,
+        magnitude: 8.0,
+        variance: 15
+    },
+    {
+        center: 0.5,
+        magnitude: 8.0,
+        variance: 15
+    },
+    {
+        center: 0.75,
+        magnitude: 4.0,
+        variance: 15
+    }
+]
+const pi = 3.14159
+const oneoversq2pi = 1 / (Math.sqrt(2*pi))
+const backgroundColor = '#ffffff'
+const lineColor = '#000000'
+const lineWidth = 2 //Must be even
+const resolution = 100
+const logoSize = 100
+const wordLogoWidth = Math.floor(pi * logoSize)
+var canvas = null
+var context = null
+
+function setLineStyle() {
+    context.lineCap = 'round'
+    context.strokeStyle = lineColor
+    context.lineWidth = lineWidth
+}
+
+function setCanvasStyle() {
+    let w = 2 * wordLogoWidth
+    let h = logoSize + 4 * lineWidth
+    canvas.style.background = backgroundColor
+    canvas.style.width = `${w}px`
+    canvas.style.height = `${h}px`
+    canvas.width = w
+    canvas.height = h
+}
+
+function calculateGaussianValue(i) {
+    let y = 0
+    for(g of gaussians) {
+        let mu = g.center * resolution
+        y = y + g.magnitude * (oneoversq2pi * Math.exp(-0.5 * Math.pow(i - mu, 2) / g.variance) / Math.pow(g.variance,0.5))
+    }
+    return y
+}
+
+function calculateFlatCurve() {
+    let curve = []
+    let scale = wordLogoWidth / resolution
+    for(var i=0;i<resolution;i++) {
+        let y = calculateGaussianValue(i)
+        let point = {
+            x:scale*i,
+            y:logoSize * (1-y)
+        }
+        curve.push(point)
+    }
+    return curve
+}
+
+function calculateWrappedCurve() {
+    let curve = []
+    let logoScale = 0.5 * logoSize
+    let arcStep = 2*pi / resolution
+    let halfPi = -0.5*pi
+    for(var i=0;i<resolution;i++) {
+        let radius = 1-2.4*calculateGaussianValue(i)
+        let angle = halfPi + (arcStep * i)
+        let x = logoScale*radius*Math.cos(angle)
+        let y = logoScale*radius*Math.sin(angle) + logoScale
+        let point = {
+            x: x + 0.5*wordLogoWidth,
+            y: y,
+            angle: angle,
+            radius: radius
+        }
+        curve.push(point)
+    }
+    return curve
+}
+
+function drawSegment(from, to) {
+    console.log(from, to)
+    context.beginPath()
+    context.moveTo(from.x, from.y + 2*lineWidth)
+    context.lineTo(to.x, to.y + 2*lineWidth)
+    context.stroke()
+}
+
+function draw(curve) {
+    for(var i=1;i<resolution;i++) {
+        drawSegment(curve[i-1],curve[i])
+    }
+}
+
+function handleRotate() {
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    draw(calculateWrappedCurve())
+}
+
+function handleFlat() {
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    draw(calculateFlatCurve())
+}
+
+function handleOnLoad() {
+    canvas = document.getElementById("canvas");
+    context = canvas.getContext('2d')
+    setCanvasStyle()
+    setLineStyle()
+    handleFlat()
+}
+</script>
+
+<body onload="handleOnLoad()">
+<canvas id="canvas">
+
+</canvas>
+
+<button onclick="handleRotate()">
+    Wrap
+</button>
+<button onclick="handleFlat()">
+    Flat
+</button>
+</body>
+
+</html>
